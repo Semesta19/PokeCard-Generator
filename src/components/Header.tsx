@@ -7,6 +7,12 @@ interface HeaderProps {
   onUpdateSettings: (newSettings: Partial<GenerationSettings>) => void;
 }
 
+const QUALITY_OPTIONS: { value: GenerationSettings['quality']; label: string; note: string }[] = [
+  { value: 'low', label: 'Fast', note: 'Cepat' },
+  { value: 'medium', label: 'Standard', note: 'Seimbang' },
+  { value: 'high', label: 'HD', note: 'Terbaik' },
+];
+
 export const Header: React.FC<HeaderProps> = ({ settings, onUpdateSettings }) => {
   const [showSettingsDropdown, setShowSettingsDropdown] = useState(false);
 
@@ -30,9 +36,7 @@ export const Header: React.FC<HeaderProps> = ({ settings, onUpdateSettings }) =>
           >
             <span className="w-1.5 h-1.5 rounded-full bg-white" />
             <span className="font-medium">
-              {settings.model === 'gemini-3-pro-image'
-                ? 'Nano Banana Pro'
-                : 'Nano Banana 2'}
+              GPT Image 2 · {QUALITY_OPTIONS.find((q) => q.value === settings.quality)?.label}
             </span>
             <Sliders className="w-3.5 h-3.5 text-white/50 ml-0.5" />
           </button>
@@ -40,41 +44,26 @@ export const Header: React.FC<HeaderProps> = ({ settings, onUpdateSettings }) =>
           {showSettingsDropdown && (
             <div className="absolute right-0 mt-2 w-64 rounded-2xl ios-glass p-2.5 z-50 animate-in fade-in zoom-in-95 duration-100 shadow-2xl">
               <div className="space-y-1">
-                <button
-                  type="button"
-                  onClick={() => {
-                    onUpdateSettings({ model: 'gemini-3-pro-image' });
-                    setShowSettingsDropdown(false);
-                  }}
-                  className={`w-full text-left p-2 rounded-xl text-xs transition-all cursor-pointer ${
-                    settings.model === 'gemini-3-pro-image'
-                      ? 'bg-white/20 text-white font-medium'
-                      : 'text-white/60 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span>Nano Banana Pro</span>
-                    <span className="text-[10px] text-white/40">HD</span>
-                  </div>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    onUpdateSettings({ model: 'gemini-3.1-flash-image' });
-                    setShowSettingsDropdown(false);
-                  }}
-                  className={`w-full text-left p-2 rounded-xl text-xs transition-all cursor-pointer ${
-                    settings.model === 'gemini-3.1-flash-image'
-                      ? 'bg-white/20 text-white font-medium'
-                      : 'text-white/60 hover:text-white hover:bg-white/5'
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <span>Nano Banana 2</span>
-                    <span className="text-[10px] text-white/40">Fast</span>
-                  </div>
-                </button>
+                {QUALITY_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => {
+                      onUpdateSettings({ quality: opt.value });
+                      setShowSettingsDropdown(false);
+                    }}
+                    className={`w-full text-left p-2 rounded-xl text-xs transition-all cursor-pointer ${
+                      settings.quality === opt.value
+                        ? 'bg-white/20 text-white font-medium'
+                        : 'text-white/60 hover:text-white hover:bg-white/5'
+                    }`}
+                  >
+                    <div className="flex items-center justify-between">
+                      <span>GPT Image 2 · {opt.label}</span>
+                      <span className="text-[10px] text-white/40">{opt.note}</span>
+                    </div>
+                  </button>
+                ))}
               </div>
 
               <div className="mt-2 pt-2 border-t border-white/10 flex items-center justify-between text-xs px-1">

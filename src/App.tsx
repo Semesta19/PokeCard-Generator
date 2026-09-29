@@ -12,9 +12,10 @@ import { DnaCustomizer } from './components/DnaCustomizer';
 import { CardDisplay } from './components/CardDisplay';
 import { CardHistory } from './components/CardHistory';
 import { PokemonDna, GenerationSettings, GeneratedCard } from './types/pokemon';
-import { POKEMON_PRESETS } from './data/pokemonDna';
+import { POKEMON_PRESETS, createDefaultDnaForName } from './data/pokemonDna';
 import { buildPokemonCardPrompt } from './utils/promptBuilder';
 import { toJapaneseName } from './utils/japaneseTransliterate';
+import { compressImageDataUrl } from './utils/imageUtils';
 import { loadCardHistory, saveCardToStorage, clearCardStorage } from './utils/cardStorage';
 import { Sparkles, AlertCircle, X } from 'lucide-react';
 
@@ -27,7 +28,8 @@ export default function App() {
   const [portraitImage, setPortraitImage] = useState<string | null>(null);
   const [facePriorityPercent, setFacePriorityPercent] = useState<number>(33);
   const [settings, setSettings] = useState<GenerationSettings>({
-    model: 'gemini-3-pro-image',
+    model: 'gpt-image-2',
+    quality: 'medium',
     facePriorityPercent: 33,
     aspectRatio: '63x88',
     resolution: '1K',
@@ -96,6 +98,9 @@ export default function App() {
     setErrorMessage(null);
 
     try {
+      // Kompres foto dulu supaya lolos limit body 4.5MB milik Vercel
+      const compressedPortrait = await compressImageDataUrl(portraitImage);
+
       const response = await fetch('/api/generate-card', {
         method: 'POST',
         headers: {
@@ -103,16 +108,29 @@ export default function App() {
         },
         body: JSON.stringify({
           prompt: compiledPrompt,
-          image: portraitImage,
-          model: settings.model,
+          image: compressedPortrait,
+          quality: settings.quality,
           imageSize: settings.resolution,
         }),
       });
 
-      const data = await response.json();
+      const rawText = await response.text();
+      let data: any = null;
+      try {
+        data = JSON.parse(rawText);
+      } catch {
+        // Respons bukan JSON (mis. error dari platform Vercel)
+        if (response.status === 413) {
+          throw new Error('Foto terlalu besar. Coba pakai foto lain yang lebih kecil.');
+        }
+        if (response.status === 504) {
+          throw new Error('Waktu generate habis. Coba turunkan kualitas ke Fast/Standard atau resolusi 1K.');
+        }
+        throw new Error(`Server error (${response.status}). Coba lagi sebentar lagi.`);
+      }
 
       if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Gagal menghasilkan gambar kartu.');
+        throw new Error([data.error || 'Gagal menghasilkan gambar kartu.', data.hint].filter(Boolean).join(' — '));
       }
 
       setCardImageUrl(data.imageUrl);
@@ -140,19 +158,30 @@ export default function App() {
     setIsGeneratingDna(true);
     setErrorMessage(null);
     try {
-      const response = await fetch('/api/generate-dna', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ pokemonName: name }),
-      });
-      const data = await response.json();
-      if (!response.ok || !data.success) {
-        throw new Error(data.error || 'Gagal meracik DNA Pokémon.');
+      let dna: PokemonDna | null = null;
+      try {
+        const response = await fetch('/api/generate-dna', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ pokemonName: name }),
+        });
+        const data = await response.json();
+        if (response.ok && data.success && data.dna) {
+          dna = data.dna;
+        }
+      } catch (err) {
+        console.warn('AI DNA generation failed, using built-in generator:', err);
       }
-      setCurrentDna(data.dna);
+
+      // Fallback ke generator berbasis aturan bila AI gagal / API key belum diatur
+      if (!dna) {
+        dna = createDefaultDnaForName(name);
+      }
+
+      setCurrentDna(dna);
       if (!cardDisplayName.trim()) {
-        setCardDisplayName(data.dna.name);
-        setJapaneseName(toJapaneseName(data.dna.name));
+        setCardDisplayName(dna.name);
+        setJapaneseName(toJapaneseName(dna.name));
       }
     } catch (err: any) {
       setErrorMessage(err.message || 'Gagal meracik DNA.');

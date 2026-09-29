@@ -1,0 +1,6 @@
+{
+  "functions": {
+    "api/generate-card.ts": { "maxDuration": 300 },
+    "api/generate-dna.ts": { "maxDuration": 60 }
+  }
+}
