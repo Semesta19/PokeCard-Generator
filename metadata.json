@@ -1,0 +1,6 @@
+{
+  "name": "PokéCard Generator Pro - 63x88 Pokémon Card AI",
+  "description": "Generate premium 63x88 Pokémon collectible trading cards featuring your face and custom Pokémon character DNA using Nano Banana Pro.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
