@@ -50,7 +50,8 @@ export interface PokemonDna {
 }
 
 export interface GenerationSettings {
-  model: 'gemini-3-pro-image' | 'gemini-3.1-flash-image' | 'gemini-3.1-flash-lite-image';
+  model: 'gpt-image-2';
+  quality: 'low' | 'medium' | 'high';
   facePriorityPercent: number; // default 30-35%
   aspectRatio: '63x88';
   resolution: '1K' | '2K';
